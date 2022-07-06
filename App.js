@@ -5,6 +5,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./components/HomeScreen";
 import RoomsScreen from "./components/RoomsScreen";
+import RecordScreen from "./components/RecordScreen";
+import DastaScreen from "./components/DataScreen";
 
 const Stack = createNativeStackNavigator();
 export default function App() {
@@ -13,6 +15,8 @@ export default function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="home" component={HomeScreen}></Stack.Screen>
         <Stack.Screen name="rooms" component={RoomsScreen}></Stack.Screen>
+        <Stack.Screen name="record" component={RecordScreen}></Stack.Screen>
+        <Stack.Screen name="data" component={DastaScreen}></Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

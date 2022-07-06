@@ -27,7 +27,7 @@ export default function NavigationMenu() {
           color="white"
         />
       </Pressable>
-      <Pressable onPress={() => navigation.navigate("machines")}>
+      <Pressable onPress={() => navigation.navigate("record")}>
         <FontAwesome5
           style={styles.icon}
           name="tshirt"

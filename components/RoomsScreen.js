@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import NavigationMenu from "./tools/NavigationMenu";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useIsFocused, useFocusEffect } from "@react-navigation/native";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -23,6 +24,7 @@ var options = {
 var cont = 0;
 
 export default function RoomsScreen({ navigation }) {
+  var client = mqtt.connect("mqtt://itr-matt.cloud.shiftr.io", options);
   const [current_val, setcurrent] = useState("");
   const [voltage_val, setvoltage_val] = useState("");
 
@@ -48,8 +50,8 @@ export default function RoomsScreen({ navigation }) {
   const [total, settotal] = useState("");
 
   useEffect(() => {
-    var client = mqtt.connect("mqtt://itr-matt.cloud.shiftr.io", options);
     client.subscribe("Santafe/#");
+
     var note;
     client.on("message", function (topic, message) {
       note = message.toString();
@@ -137,6 +139,17 @@ export default function RoomsScreen({ navigation }) {
       }
     });
   }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("Screen was focused");
+
+      return () => {
+        console.log("Screen was unfocused");
+        client.end();
+        // Useful for cleanup functions
+      };
+    }, [])
+  );
 
   return (
     <ScrollView
