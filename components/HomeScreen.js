@@ -18,14 +18,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import NfcManager, { NfcTech } from "react-native-nfc-manager";
 import { useIsFocused, useFocusEffect } from "@react-navigation/native";
 
-var mqtt = require("@taoqf/react-native-mqtt");
-var options = {
-  protocol: "mqtts",
-  clientId: "User1",
-  username: "itr-matt",
-  password: "o85XfQqMdOIfMnoL",
-};
-
 const screenWidth = Dimensions.get("window").width;
 
 var mqtt = require("@taoqf/react-native-mqtt");
@@ -60,7 +52,7 @@ export default function HomeScreen({ navigation }) {
   const [total, settotal] = useState("");
 
   useEffect(() => {
-    client.subscribe("Santafe/#");
+    client.subscribe("Santafe/Disponibles");
 
     var note;
     client.on("message", function (topic, message) {
@@ -73,7 +65,7 @@ export default function HomeScreen({ navigation }) {
 
   async function savemirafare() {
     let mifarePages = [];
-
+    setreading(true);
     try {
       // STEP 1
       let reqMifare = await NfcManager.requestTechnology(
@@ -157,6 +149,7 @@ export default function HomeScreen({ navigation }) {
             retain: true,
           });
           client_save.end();
+          setreading(false);
           setprendas("");
         }
       });
@@ -191,13 +184,13 @@ export default function HomeScreen({ navigation }) {
     >
       <NavigationMenu></NavigationMenu>
       <View style={styles.card_info}>
+        <Text style={styles.text_info_disponibles}>Probadores disponibles</Text>
         <View style={styles.container_disponibles}>
-          <Text style={styles.text_info_disponibles}>Disponibles:</Text>
           <Text style={styles.text_info_disponibles_number}>{total}</Text>
         </View>
 
-        <Text style={styles.text_info}>Ingreso Prendas</Text>
-        <View style={styles.line_separator}></View>
+        <Text style={styles.text_info_disponibles}>Ingreso Prendas</Text>
+        {/* <View style={styles.line_separator}></View> */}
         {sending ? (
           <ActivityIndicator
             animating={true}
@@ -239,14 +232,15 @@ const styles = StyleSheet.create({
   },
   container_disponibles: {
     display: "flex",
-    flexDirection: "row",
-    width: "80%",
-    height: 100,
+    flexDirection: "column",
+    width: "40%",
+    height: 70,
     justifyContent: "space-evenly",
     alignItems: "center",
     backgroundColor: "#D3D3D1",
     borderRadius: 15,
     marginBottom: 30,
+    marginTop: 10,
   },
   container: {
     flex: 1,
@@ -272,12 +266,12 @@ const styles = StyleSheet.create({
   },
 
   text_info_disponibles: {
-    fontSize: 35,
+    fontSize: 27,
     color: "white",
     fontWeight: "bold",
   },
   text_info_disponibles_number: {
-    fontSize: 35,
+    fontSize: 50,
     color: "white",
     fontWeight: "bold",
   },
