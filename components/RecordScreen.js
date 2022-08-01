@@ -44,9 +44,14 @@ export default function RecordScreen({ navigation }) {
     })();
   };
 
+  const delete_storage = async () => {
+    await AsyncStorage.removeItem("Prendas_probadas");
+  };
+
   const save_record = async (code, status) => {
     var jsonValue = await AsyncStorage.getItem("Prendas_probadas");
     var today = new Date();
+    var date_hour = new Date();
     var dd = String(today.getDate()).padStart(2, "0");
     var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
     var yyyy = today.getFullYear();
@@ -56,7 +61,7 @@ export default function RecordScreen({ navigation }) {
     var hora_val = String(hour_date) + ":" + String(min).padStart(2, "0");
     var data_agregate = {};
     data_agregate["codigo"] = code;
-    data_agregate["fecha"] = today;
+    data_agregate["fecha"] = date_hour;
     if (jsonValue == null) {
       jsonValue = [];
     } else {
@@ -71,6 +76,29 @@ export default function RecordScreen({ navigation }) {
     await AsyncStorage.setItem("Prendas_probadas", JSON.stringify(jsonValue));
     setvalue_entry("");
     setScanned(false);
+    console.log("longitud", jsonValue.length);
+    if (jsonValue.length > 10) {
+      fetch(`https://webhook.site/20460468-f6e6-40e6-a211-baa93e4149ad`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          data: jsonValue,
+          type: "registro items rechazados",
+        }),
+      }).then((response) => {
+        console.log("esta es la", response.status);
+        if (response.status === 200) {
+          delete_storage();
+          return false;
+        } else {
+          console.log("errro");
+          return false;
+        }
+      });
+    }
   };
 
   const onChangeHandler = (value) => {

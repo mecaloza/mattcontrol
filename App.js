@@ -7,6 +7,7 @@ import HomeScreen from "./components/HomeScreen";
 import RoomsScreen from "./components/RoomsScreen";
 import RecordScreen from "./components/RecordScreen";
 import DastaScreen from "./components/DataScreen";
+import PrendasScreen from "./components/PrendasScreen";
 
 const Stack = createNativeStackNavigator();
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Stack.Screen name="rooms" component={RoomsScreen}></Stack.Screen>
         <Stack.Screen name="record" component={RecordScreen}></Stack.Screen>
         <Stack.Screen name="data" component={DastaScreen}></Stack.Screen>
+        <Stack.Screen name="prendas" component={PrendasScreen}></Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

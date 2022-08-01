@@ -14,10 +14,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import NavigationMenu from "./tools/NavigationMenu";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import NfcManager, { NfcTech } from "react-native-nfc-manager";
 import { useIsFocused, useFocusEffect } from "@react-navigation/native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 const screenWidth = Dimensions.get("window").width;
 
 var mqtt = require("@taoqf/react-native-mqtt");
@@ -30,30 +30,24 @@ var options = {
 var cont = 0;
 
 export default function HomeScreen({ navigation }) {
-  // var client = mqtt.connect("mqtt://itr-matt.cloud.shiftr.io", options);
   var client = null;
   useFocusEffect(
     React.useCallback(() => {
-      console.log("Screen was focused");
       client = mqtt.connect("mqtt://itr-matt.cloud.shiftr.io", options);
-
       return () => {
-        console.log("Screen was unfocused");
         client.end();
-        // Useful for cleanup functions
       };
     }, [])
   );
-
   const [prendas, setprendas] = useState("");
+  const [prendas_keep, setprendas_keep] = useState("");
+
   const [sending, setsending] = useState(false);
   const [reading, setreading] = useState(false);
-
   const [total, settotal] = useState("");
 
   useEffect(() => {
     client.subscribe("Santafe/Disponibles");
-
     var note;
     client.on("message", function (topic, message) {
       note = message.toString();
@@ -67,31 +61,16 @@ export default function HomeScreen({ navigation }) {
     let mifarePages = [];
     setreading(true);
     try {
-      // STEP 1
       let reqMifare = await NfcManager.requestTechnology(
         NfcTech.MifareUltralight
       );
       const tag = await NfcManager.getTag();
-      // Alert.alert("id", tag.id);
       save_record(tag.id);
       setsending(true);
-      const readLength = 60;
-      const mifarePagesRead = await Promise.all(
-        [...Array(readLength).keys()].map(async (_, i) => {
-          const pages = await NfcManager.mifareUltralightHandlerAndroid // STEP 2
-            .mifareUltralightReadPages(i * 4); // STEP 3
-          mifarePages.push(pages);
-        })
-      );
-
-      // Alert.alert("esta es la segunda", mifarePagesRead);
     } catch (ex) {
-      // Alert.alert(ex);
     } finally {
-      // STEP 4
       NfcManager.cancelTechnologyRequest();
     }
-
     return mifarePages;
   }
 
@@ -99,81 +78,113 @@ export default function HomeScreen({ navigation }) {
     let mifarePages = [];
     setreading(true);
     try {
-      // STEP 1
       let reqMifare = await NfcManager.requestTechnology(
         NfcTech.MifareUltralight
       );
       const tag = await NfcManager.getTag();
-      // Alert.alert("id", tag.id);
-
       read_record(tag.id);
-      const readLength = 60;
-      const mifarePagesRead = await Promise.all(
-        [...Array(readLength).keys()].map(async (_, i) => {
-          const pages = await NfcManager.mifareUltralightHandlerAndroid // STEP 2
-            .mifareUltralightReadPages(i * 4); // STEP 3
-          mifarePages.push(pages);
-        })
-      );
-
-      // Alert.alert("esta es la segunda", mifarePagesRead);
     } catch (ex) {
-      // Alert.alert(ex);
     } finally {
-      // STEP 4
       NfcManager.cancelTechnologyRequest();
     }
-
     return mifarePages;
   }
 
-  const save_record = (value) => {
-    var options_inner = {
-      protocol: "mqtts",
-      clientId: "User1_save",
-      username: "itr-matt",
-      password: "o85XfQqMdOIfMnoL",
-    };
-    var rfi_id = value;
-    var client_save = mqtt.connect(
-      "mqtt://itr-matt.cloud.shiftr.io",
-      options_inner
-    );
-    client_save.on("connect", function () {
-      client_save.subscribe("Santafe/#", function (err) {
-        if (!err) {
-          setsending(false);
+  const save_record = async (value) => {
+    var jsonValue = await AsyncStorage.getItem("Tarjetas_probadores");
+    var today = new Date();
+    var date_hour = new Date();
 
-          client_save.publish("Santafe/" + rfi_id, prendas.toString(), {
-            qos: 0,
-            retain: true,
-          });
-          client_save.end();
-          setreading(false);
-          setprendas("");
-        }
-      });
-    });
+    var dd = String(today.getDate()).padStart(2, "0");
+    var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+    var yyyy = today.getFullYear();
+    today = mm + "/" + dd + "/" + yyyy;
+    var hour_date = new Date().getHours();
+    var min = new Date().getMinutes();
+    var hora_val = String(hour_date) + ":" + String(min).padStart(2, "0");
+    var data_agregate = {};
+    data_agregate["id"] = value;
+    data_agregate["fecha_ingreso"] = date_hour;
+    data_agregate["ingreso_prendas"] = prendas;
+    // data_agregate["hora_ingreso"] = hora_val;
+    data_agregate["prendas_devueltas"] = "";
+    // data_agregate["hora_salida"] = "";
+    data_agregate["fecha_salida"] = "";
+
+    if (jsonValue == null) {
+      jsonValue = [];
+    } else {
+      jsonValue = JSON.parse(jsonValue);
+    }
+    if (jsonValue[0] === undefined) {
+      jsonValue[0] = data_agregate;
+    } else {
+      jsonValue.push(data_agregate);
+    }
+    console.log("json", jsonValue);
+    await AsyncStorage.setItem(
+      "Tarjetas_probadores",
+      JSON.stringify(jsonValue)
+    );
+    setreading(false);
+    setprendas("");
+    setsending(false);
   };
 
-  const read_record = (value) => {
-    var options_inner = {
-      protocol: "mqtts",
-      clientId: "User1_read",
-      username: "itr-matt",
-      password: "o85XfQqMdOIfMnoL",
-    };
-    var rfi_id = value;
-    var client_read = mqtt.connect(
-      "mqtt://itr-matt.cloud.shiftr.io",
-      options_inner
-    );
-    var rfi_id = value;
-    client_read.subscribe("Santafe/" + rfi_id);
-    client_read.on("message", function (topic, message) {
-      setprendas(message.toString());
-      client_read.end();
-      setreading(false);
+  const delete_storage = async () => {
+    await AsyncStorage.removeItem("Tarjetas_probadores");
+  };
+
+  const read_record = async (value) => {
+    var jsonValue = await AsyncStorage.getItem("Tarjetas_probadores");
+    jsonValue = JSON.parse(jsonValue);
+    // console.log("asdas", jsonValue);
+    if (jsonValue != null && value !== "") {
+      var time_item = jsonValue.filter((item) => item.id === value);
+      var index = jsonValue.findIndex((item) => item.id === value);
+      // console.log("este es el index", index);
+      if (time_item?.length >= 0) {
+        var hour_date = new Date().getHours();
+        var min = new Date().getMinutes();
+        var hora_val = String(hour_date) + ":" + String(min).padStart(2, "0");
+        // console.log("esto es antes", time_item);
+        setprendas(time_item[0]["ingreso_prendas"]);
+        time_item[0]["prendas_devueltas"] = prendas_keep;
+        // time_item[0]["hora_salida"] = hora_val;
+        time_item[0]["fecha_salida"] = hora_val;
+
+        // console.log("esto es despues", time_item);
+        jsonValue[index] = time_item[0];
+        await AsyncStorage.setItem(
+          "Tarjetas_probadores",
+          JSON.stringify(jsonValue)
+        );
+        setreading(false);
+        setsending(false);
+      }
+    }
+    fetch(`https://webhook.site/20460468-f6e6-40e6-a211-baa93e4149ad`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        data: jsonValue,
+        type: "registro tarjeta",
+      }),
+    }).then((response) => {
+      console.log("esta es la", response.status);
+      if (response.status === 200) {
+        return response.json().then((json_response) => {
+          console.log("sda", json_response);
+          delete_storage();
+          return false;
+        });
+      } else {
+        console.log("errro");
+        return false;
+      }
     });
   };
 
@@ -181,6 +192,7 @@ export default function HomeScreen({ navigation }) {
     <ScrollView
       style={styles.container}
       contentContainerStyle={{ flexGrow: 1, alignItems: "center" }}
+      keyboardShouldPersistTaps="always"
     >
       <NavigationMenu></NavigationMenu>
       <View style={styles.card_info}>
@@ -199,7 +211,9 @@ export default function HomeScreen({ navigation }) {
             color="white"
           ></ActivityIndicator>
         ) : reading ? (
-          <Text style={styles.text_info}>Acerca la tarjeta</Text>
+          <TouchableOpacity onPress={() => setreading(false)}>
+            <Text style={styles.text_info}>Acerca la tarjeta</Text>
+          </TouchableOpacity>
         ) : (
           <TextInput
             autoFocus={true}
@@ -220,6 +234,12 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+      <Pressable
+        style={styles.icon_settig}
+        onPress={() => navigation.navigate("prendas")}
+      >
+        <Ionicons name="settings" size={30} color="white" />
+      </Pressable>
     </ScrollView>
   );
 }
@@ -311,6 +331,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 20,
+  },
+  icon_settig: {
+    position: "absolute",
+    right: "90%",
+    top: 200,
   },
 
   row_button: {
