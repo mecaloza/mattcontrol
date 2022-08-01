@@ -49,6 +49,8 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     client.subscribe("Santafe/Disponibles");
     var note;
+    // delete_storage();
+
     client.on("message", function (topic, message) {
       note = message.toString();
       if (topic === "Santafe/Disponibles") {
@@ -144,6 +146,7 @@ export default function HomeScreen({ navigation }) {
       var index = jsonValue.findIndex((item) => item.id === value);
       // console.log("este es el index", index);
       if (time_item?.length >= 0) {
+        var date_end = new Date();
         var hour_date = new Date().getHours();
         var min = new Date().getMinutes();
         var hora_val = String(hour_date) + ":" + String(min).padStart(2, "0");
@@ -151,7 +154,7 @@ export default function HomeScreen({ navigation }) {
         setprendas(time_item[0]["ingreso_prendas"]);
         time_item[0]["prendas_devueltas"] = prendas_keep;
         // time_item[0]["hora_salida"] = hora_val;
-        time_item[0]["fecha_salida"] = hora_val;
+        time_item[0]["fecha_salida"] = date_end;
 
         // console.log("esto es despues", time_item);
         jsonValue[index] = time_item[0];
@@ -176,11 +179,8 @@ export default function HomeScreen({ navigation }) {
     }).then((response) => {
       console.log("esta es la", response.status);
       if (response.status === 200) {
-        return response.json().then((json_response) => {
-          console.log("sda", json_response);
-          delete_storage();
-          return false;
-        });
+        delete_storage();
+        return false;
       } else {
         console.log("errro");
         return false;
