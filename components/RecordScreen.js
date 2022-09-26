@@ -36,6 +36,17 @@ export default function RecordScreen({ navigation }) {
   const [cam_reader, setreader] = useState(false);
   const [keybor_touch, setkeybor_touch] = useState(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [show, setShow] = useState(false);
+
+  let timer;
+  const sendMessage = (e) => {
+    setShow(true);
+    timer = setTimeout(() => setShow(false), 1000);
+  };
+  useEffect(() => {
+    // "timer" will be undefined again after the next re-render
+    return () => clearTimeout(timer);
+  }, []);
 
   const askForCameraPermission = () => {
     (async () => {
@@ -49,9 +60,11 @@ export default function RecordScreen({ navigation }) {
   };
 
   const save_record = async (code, status) => {
+    sendMessage();
     var jsonValue = await AsyncStorage.getItem("Prendas_probadas");
     var today = new Date();
     var date_hour = new Date();
+    date_hour.setHours(date_hour.getHours() - 5);
     var dd = String(today.getDate()).padStart(2, "0");
     var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
     var yyyy = today.getFullYear();
@@ -78,7 +91,8 @@ export default function RecordScreen({ navigation }) {
     setScanned(false);
     console.log("longitud", jsonValue.length);
     if (jsonValue.length > 10) {
-      fetch(`https://webhook.site/20460468-f6e6-40e6-a211-baa93e4149ad`, {
+      setloading(true);
+      fetch(`https://data.arkia.pro/api/services/app/Iot/Received`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -92,9 +106,11 @@ export default function RecordScreen({ navigation }) {
         console.log("esta es la", response.status);
         if (response.status === 200) {
           delete_storage();
+          setloading(false);
           return false;
         } else {
           console.log("errro");
+          setloading(false);
           return false;
         }
       });
@@ -195,6 +211,15 @@ export default function RecordScreen({ navigation }) {
           )}
         </>
       )}
+      {show && (
+        <FontAwesome
+          name="check-circle"
+          size={50}
+          style={styles.icon_check}
+          color="rgb(18, 227, 67)"
+        />
+      )}
+
       <Pressable
         style={styles.button_form}
         onPress={() =>
@@ -287,5 +312,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 15,
     top: 30,
+  },
+  icon_check: {
+    marginTop: 10,
   },
 });

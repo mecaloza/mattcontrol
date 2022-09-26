@@ -47,16 +47,14 @@ export default function DastaScreen({ navigation }) {
             <Text style={styles.field_text_title}>ID</Text>
           </View>
           <View style={styles.field_table_title}>
-            <Text style={styles.field_text_title}>Fecha</Text>
+            <Text style={styles.field_text_title}>Fecha_in</Text>
           </View>
-          <View style={styles.field_table_title}>
-            <Text style={styles.field_text_title}>Hora/in</Text>
-          </View>
+
           <View style={styles.field_table_title}>
             <Text style={styles.field_text_title}>Prendas/in</Text>
           </View>
           <View style={styles.field_table_title}>
-            <Text style={styles.field_text_title}>Hora/out</Text>
+            <Text style={styles.field_text_title}>Fecha_out</Text>
           </View>
           <View style={styles.field_table_title}>
             <Text style={styles.field_text_title}>Prendas/out</Text>
@@ -70,20 +68,20 @@ export default function DastaScreen({ navigation }) {
                 <Text style={styles.field_table_text}>{item?.id}</Text>
               </View>
               <View style={styles.field_table}>
-                <Text style={styles.field_table_text}>{item?.fecha}</Text>
-              </View>
-              <View style={styles.field_table}>
                 <Text style={styles.field_table_text}>
-                  {item?.hora_ingreso}
+                  {item?.fecha_ingreso}
                 </Text>
               </View>
+
               <View style={styles.field_table}>
                 <Text style={styles.field_table_text}>
                   {item?.ingreso_prendas}
                 </Text>
               </View>
               <View style={styles.field_table}>
-                <Text style={styles.field_table_text}>{item?.hora_salida}</Text>
+                <Text style={styles.field_table_text}>
+                  {item?.fecha_salida}
+                </Text>
               </View>
               <View style={styles.field_table}>
                 <Text style={styles.field_table_text}>

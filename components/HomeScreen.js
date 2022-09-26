@@ -12,6 +12,7 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import NavigationMenu from "./tools/NavigationMenu";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
@@ -41,35 +42,47 @@ export default function HomeScreen({ navigation }) {
   );
   const [prendas, setprendas] = useState("");
   const [prendas_keep, setprendas_keep] = useState("");
+  const [prendas_change, setprendas_change] = useState(0);
+  const [prendas_bol, setprendas_bol] = useState(false);
 
   const [sending, setsending] = useState(false);
   const [reading, setreading] = useState(false);
   const [total, settotal] = useState("");
 
   useEffect(() => {
-    client.subscribe("Santafe/Disponibles");
+    client.subscribe("Florida/Disponibles");
     var note;
     // delete_storage();
 
     client.on("message", function (topic, message) {
+      console.log("este", note);
+      console.log("este", topic);
+
       note = message.toString();
-      if (topic === "Santafe/Disponibles") {
+      if (topic === "Florida/Disponibles") {
         settotal(note);
       }
     });
   }, []);
 
+  useEffect(() => {
+    console.log("esta actulizado", total);
+  }, [total]);
+
   async function savemirafare() {
     let mifarePages = [];
     setreading(true);
+    console.log("eeee");
     try {
       let reqMifare = await NfcManager.requestTechnology(
         NfcTech.MifareUltralight
       );
+      console.log("eeee");
       const tag = await NfcManager.getTag();
       save_record(tag.id);
       setsending(true);
     } catch (ex) {
+      console.log("eeee", ex);
     } finally {
       NfcManager.cancelTechnologyRequest();
     }
@@ -92,10 +105,101 @@ export default function HomeScreen({ navigation }) {
     return mifarePages;
   }
 
+  const change_prendas = (operator) => {
+    setprendas_bol(true);
+    console.log("pasee");
+    if (operator === "+") {
+      setprendas_change((current) => current + 1);
+    } else {
+      setprendas_change((current) => current - 1);
+    }
+  };
+
+  const cancel_operation = () => {
+    setreading(false);
+    NfcManager.cancelTechnologyRequest();
+  };
+
+  let textLog = "";
+  if (prendas_change >= 1) {
+    textLog = "+ " + prendas_change;
+  } else if (prendas_change < 0) {
+    textLog = prendas_change;
+    console.log("sdas", textLog);
+  }
+
   const save_record = async (value) => {
     var jsonValue = await AsyncStorage.getItem("Tarjetas_probadores");
+    jsonValue = JSON.parse(jsonValue);
+    if (prendas === "" && !prendas_bol) {
+      setreading(false);
+      setsending(false);
+      Alert.alert("Ingresa un valor valido de prendas.");
+
+      return false;
+    }
+    if (prendas_bol) {
+      console.log("entro?");
+      var time_item = jsonValue.filter((item) => item.id === value);
+      var index = jsonValue.findIndex((item) => item.id === value);
+      var num_prendas = 0;
+      var num_prendas_change = parseInt(prendas_change);
+
+      if (time_item?.length >= 0) {
+        try {
+          num_prendas = parseInt(
+            time_item[time_item.length - 1]["ingreso_prendas"]
+          );
+          if (num_prendas + num_prendas_change > 0) {
+            setprendas(num_prendas + num_prendas_change);
+          } else {
+            setprendas(0);
+          }
+        } catch {
+          setprendas("");
+        }
+        if (num_prendas + num_prendas_change > 0) {
+          time_item[time_item.length - 1]["ingreso_prendas"] =
+            num_prendas + num_prendas_change;
+        } else {
+          time_item[time_item.length - 1]["ingreso_prendas"] = 0;
+        }
+
+        // time_item[0]["hora_salida"] = hora_val;
+
+        console.log("esto es si");
+        jsonValue[index] = time_item[time_item.length - 1];
+        await AsyncStorage.setItem(
+          "Tarjetas_probadores",
+          JSON.stringify(jsonValue)
+        );
+        setreading(false);
+        setsending(false);
+      }
+      setprendas_bol(false);
+      setprendas_change(0);
+      return false;
+    }
+
+    if (jsonValue !== null) {
+      var time_item = jsonValue.filter((item) => item.id === value);
+      var index = jsonValue.findIndex((item) => item.id === value);
+      if (time_item?.length > 0) {
+        if (time_item[time_item.length - 1]["fecha_salida"] === "") {
+          setreading(false);
+          setprendas("");
+          setsending(false);
+          Alert.alert("Antes de grabar, primero debes leer esta tarjeta.");
+          return false;
+        }
+      }
+    }
     var today = new Date();
+
     var date_hour = new Date();
+    date_hour.setHours(date_hour.getHours() - 5);
+
+    console.log("asdsdasdas", date_hour);
 
     var dd = String(today.getDate()).padStart(2, "0");
     var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
@@ -115,9 +219,8 @@ export default function HomeScreen({ navigation }) {
 
     if (jsonValue == null) {
       jsonValue = [];
-    } else {
-      jsonValue = JSON.parse(jsonValue);
     }
+
     if (jsonValue[0] === undefined) {
       jsonValue[0] = data_agregate;
     } else {
@@ -134,12 +237,26 @@ export default function HomeScreen({ navigation }) {
   };
 
   const delete_storage = async () => {
+    console.log("si se borro");
+    z;
     await AsyncStorage.removeItem("Tarjetas_probadores");
   };
 
+  const clear_fill_storage = async (json) => {
+    console.log("si se borro");
+
+    await AsyncStorage.setItem("Tarjetas_probadores", JSON.stringify(json));
+  };
+
   const read_record = async (value) => {
+    // delete_storage();
+    if (prendas_bol) {
+      Alert.alert("Primero debes grabar la tarjeta.");
+      return false;
+    }
     var jsonValue = await AsyncStorage.getItem("Tarjetas_probadores");
     jsonValue = JSON.parse(jsonValue);
+
     // console.log("asdas", jsonValue);
     if (jsonValue != null && value !== "") {
       var time_item = jsonValue.filter((item) => item.id === value);
@@ -147,17 +264,28 @@ export default function HomeScreen({ navigation }) {
       // console.log("este es el index", index);
       if (time_item?.length >= 0) {
         var date_end = new Date();
+        date_end.setHours(date_end.getHours() - 5);
         var hour_date = new Date().getHours();
         var min = new Date().getMinutes();
         var hora_val = String(hour_date) + ":" + String(min).padStart(2, "0");
-        // console.log("esto es antes", time_item);
-        setprendas(time_item[0]["ingreso_prendas"]);
-        time_item[0]["prendas_devueltas"] = prendas_keep;
+        console.log("esto es antes", time_item[time_item.length - 1]);
+        try {
+          setprendas(time_item[time_item.length - 1]["ingreso_prendas"]);
+        } catch {
+          setprendas("");
+        }
+
+        time_item[time_item.length - 1]["prendas_devueltas"] = prendas_keep;
         // time_item[0]["hora_salida"] = hora_val;
-        time_item[0]["fecha_salida"] = date_end;
+        time_item[time_item.length - 1]["fecha_salida"] = date_end;
 
         // console.log("esto es despues", time_item);
-        jsonValue[index] = time_item[0];
+        jsonValue[index] = time_item[time_item.length - 1];
+
+        var send_data = jsonValue.filter((item) => item.fecha_salida !== "");
+        var save_data = jsonValue.filter((item) => item.fecha_salida === "");
+
+        console.log("est es lo guardado", jsonValue);
         await AsyncStorage.setItem(
           "Tarjetas_probadores",
           JSON.stringify(jsonValue)
@@ -166,20 +294,23 @@ export default function HomeScreen({ navigation }) {
         setsending(false);
       }
     }
-    fetch(`https://webhook.site/20460468-f6e6-40e6-a211-baa93e4149ad`, {
+    console.log("esto es lo que se madna", send_data);
+    console.log("esto es lo que se madna", save_data);
+
+    fetch(`https://data.arkia.pro/api/services/app/Iot/Received`, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        data: jsonValue,
+        data: send_data,
         type: "registro tarjeta",
       }),
     }).then((response) => {
       console.log("esta es la", response.status);
       if (response.status === 200) {
-        delete_storage();
+        clear_fill_storage(save_data);
         return false;
       } else {
         console.log("errro");
@@ -197,8 +328,18 @@ export default function HomeScreen({ navigation }) {
       <NavigationMenu></NavigationMenu>
       <View style={styles.card_info}>
         <Text style={styles.text_info_disponibles}>Probadores disponibles</Text>
-        <View style={styles.container_disponibles}>
-          <Text style={styles.text_info_disponibles_number}>{total}</Text>
+
+        <View style={styles.container_disponibles_logo}>
+          <Pressable
+            style={styles.container_disponibles}
+            onPress={() => delete_storage()}
+          >
+            <Text style={styles.text_info_disponibles_number}>{total}</Text>
+          </Pressable>
+          <Image
+            style={styles.image_heart}
+            source={require("../assets/matt_conejo.png")}
+          />
         </View>
 
         <Text style={styles.text_info_disponibles}>Ingreso Prendas</Text>
@@ -211,18 +352,36 @@ export default function HomeScreen({ navigation }) {
             color="white"
           ></ActivityIndicator>
         ) : reading ? (
-          <TouchableOpacity onPress={() => setreading(false)}>
+          <TouchableOpacity onPress={() => cancel_operation()}>
             <Text style={styles.text_info}>Acerca la tarjeta</Text>
           </TouchableOpacity>
         ) : (
-          <TextInput
-            autoFocus={true}
-            keyboardType="numeric"
-            style={styles.input_form}
-            onChangeText={setprendas}
-            value={prendas.toString()}
-            placeholder=""
-          ></TextInput>
+          <View style={styles.container_number_actions}>
+            <Pressable style={styles.button_form_number}>
+              <Text
+                style={styles.title_button_number}
+                onPress={() => change_prendas("-")}
+              >
+                -
+              </Text>
+            </Pressable>
+            <TextInput
+              autoFocus={true}
+              keyboardType="numeric"
+              style={styles.input_form}
+              onChangeText={setprendas}
+              value={prendas_bol ? textLog.toString() : prendas.toString()}
+              placeholder=""
+            ></TextInput>
+            <Pressable style={styles.button_form_number}>
+              <Text
+                style={styles.title_button_number}
+                onPress={() => change_prendas("+")}
+              >
+                +
+              </Text>
+            </Pressable>
+          </View>
         )}
 
         <View style={styles.row_button}>
@@ -234,12 +393,12 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
-      <Pressable
+      {/* <Pressable
         style={styles.icon_settig}
         onPress={() => navigation.navigate("prendas")}
       >
         <Ionicons name="settings" size={30} color="white" />
-      </Pressable>
+      </Pressable> */}
     </ScrollView>
   );
 }
@@ -273,11 +432,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     display: "flex",
     alignItems: "center",
-    marginTop: 100,
+    marginTop: 90,
   },
   title_button: {
     fontSize: 20,
     color: "black",
+    fontWeight: "bold",
+  },
+  title_button_number: {
+    fontSize: 30,
+    color: "white",
     fontWeight: "bold",
   },
   text_info: {
@@ -314,13 +478,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   input_form: {
-    width: "70%",
+    width: "30%",
     height: 60,
     backgroundColor: "white",
     borderRadius: 5,
     marginTop: 20,
     fontSize: 40,
     textAlign: "center",
+  },
+  container_number_actions: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
   },
   button_form: {
     width: "40%",
@@ -331,6 +502,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderRadius: 20,
+  },
+  button_form_number: {
+    width: 60,
+    height: 60,
+    backgroundColor: "#D3D3D1",
+    marginTop: 20,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 30,
   },
   icon_settig: {
     position: "absolute",
@@ -343,5 +524,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
     justifyContent: "space-around",
+  },
+
+  image_heart: {
+    width: 100,
+    height: 100,
+    resizeMode: "stretch",
+    position: "absolute",
+    right: 100,
+  },
+  container_disponibles_logo: {
+    display: "flex",
+    flexDirection: "row",
   },
 });
