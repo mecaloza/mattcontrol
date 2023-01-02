@@ -83,8 +83,10 @@ export default function HomeScreen({ navigation }) {
       setsending(true);
     } catch (ex) {
       console.log("eeee", ex);
+      setreading(false);
     } finally {
       NfcManager.cancelTechnologyRequest();
+      setreading(false);
     }
     return mifarePages;
   }
@@ -93,15 +95,21 @@ export default function HomeScreen({ navigation }) {
     let mifarePages = [];
     setreading(true);
     try {
+      console.log("si esta tratando");
       let reqMifare = await NfcManager.requestTechnology(
         NfcTech.MifareUltralight
       );
       const tag = await NfcManager.getTag();
       read_record(tag.id);
     } catch (ex) {
+      console.log("se esta por aca o que", ex);
+      setreading(false);
     } finally {
+      console.log("se esta por aca o quesdas");
       NfcManager.cancelTechnologyRequest();
+      setreading(false);
     }
+    console.log("se esta por aca o siiiii");
     return mifarePages;
   }
 
@@ -116,8 +124,8 @@ export default function HomeScreen({ navigation }) {
   };
 
   const cancel_operation = () => {
-    setreading(false);
     NfcManager.cancelTechnologyRequest();
+    setreading(false);
   };
 
   let textLog = "";
@@ -175,6 +183,7 @@ export default function HomeScreen({ navigation }) {
         );
         setreading(false);
         setsending(false);
+        NfcManager.cancelTechnologyRequest();
       }
       setprendas_bol(false);
       setprendas_change(0);
@@ -231,6 +240,7 @@ export default function HomeScreen({ navigation }) {
       "Tarjetas_probadores",
       JSON.stringify(jsonValue)
     );
+    NfcManager.cancelTechnologyRequest();
     setreading(false);
     setprendas("");
     setsending(false);
@@ -238,7 +248,6 @@ export default function HomeScreen({ navigation }) {
 
   const delete_storage = async () => {
     console.log("si se borro");
-    z;
     await AsyncStorage.removeItem("Tarjetas_probadores");
   };
 
@@ -295,7 +304,7 @@ export default function HomeScreen({ navigation }) {
       }
     }
     console.log("esto es lo que se madna", send_data);
-    console.log("esto es lo que se madna", save_data);
+    console.log("esto es lo que se guaarda", save_data);
 
     fetch(`https://data.arkia.pro/api/services/app/Iot/Received`, {
       method: "POST",
